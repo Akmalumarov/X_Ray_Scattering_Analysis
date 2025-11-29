@@ -1,11 +1,6 @@
 # .gitignore
 
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Python
+# ==================== Python ====================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,27 +21,93 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+dmypy.json
 
-# Ваши пакеты (добавь это)
-xray_tools.egg-info/
-tools/*.egg-info/
+# ==================== macOS ====================
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Jupyter
+# ==================== Jupyter ====================
 .ipynb_checkpoints/
-*.ipynb
+*.ipynb_checkpoints/
+.nbstripout
 
-# IDE
+# ==================== IDE ====================
+# VS Code
 .vscode/
+*.code-workspace
+
+# PyCharm
 .idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-*
+sublime-*
+
+# Vim
 *.swp
 *.swo
+*~
 
-# Данные (если не хотите коммитить)
-*.dat
-*.edf
-*.h5
-*.nxs
+# ==================== Data Files ====================
+# Раскомментируй если не хочешь коммитить данные
+# *.dat
+# *.edf
+# *.h5
+# *.nxs
+# *.tif
+# *.tiff
+# *.cbf
 
-# Временные файлы
+# ==================== Temporary Files ====================
 *.tmp
 *.temp
+*.log
+*.cache
+
+# ==================== Environment ====================
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ==================== Project Specific ====================
+# SAXS/WAXS project
+tools/*.egg-info/
+xray_tools.egg-info/
+
+# ==================== System ====================
+# Windows
+[Dd]esktop.ini
+Thumbs.db
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ==================== Archives ====================
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
