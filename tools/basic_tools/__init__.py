@@ -1,10 +1,12 @@
-from .data_loader import BM26_experiment
+# tools/basic_tools/__init__.py
+from .data_loader import BM26_experiment, ID02_experiment
 from .show_tree import show_tree, get_imports
-from .experiment_catalog import scan_session  # ← убедись что эта строка есть
+from .experiment_catalog import scan_session
 
 __all__ = [
     'BM26_experiment',
-    'show_tree', 
+    'ID02_experiment',  # ← добавить эту строку
+    'show_tree',
     'get_imports',
-    'scan_session'  # ← и эта
+    'scan_session'
 ]
