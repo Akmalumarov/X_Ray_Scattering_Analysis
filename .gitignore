@@ -8,8 +8,6 @@
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
-
 *$py.class
 *.so
 .Python
@@ -28,6 +26,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Ваши пакеты (добавь это)
+xray_tools.egg-info/
+tools/*.egg-info/
 
 # Jupyter
 .ipynb_checkpoints/
