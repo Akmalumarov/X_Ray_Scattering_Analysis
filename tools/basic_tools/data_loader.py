@@ -78,16 +78,16 @@ class BM26_experiment:
         return dat_files
     
     def read_1d_dat(self, path_to_file: str) -> List[np.ndarray]:
+        try:  # ← этот try должен быть с отступом
             data = np.loadtxt(path_to_file)
             if data.ndim == 2 and data.shape[1] >= 2:
-                q = data[:, 0]  # первый столбец - q значения
-                intensity = data[:, 1]  # второй столбец - интенсивность
+                q = data[:, 0]
+                intensity = data[:, 1]
                 return [q, intensity]
             else:
                 print(f"Некорректный формат данных в файле {path_to_file}")
                 return [np.array([]), np.array([])]
-                
-        except Exception as e:
+        except Exception as e:  # ← и этот except
             print(f"Ошибка при чтении файла {path_to_file}: {e}")
             return [np.array([]), np.array([])]
     

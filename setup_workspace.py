@@ -9,8 +9,6 @@ try:
     import numpy as np
     import matplotlib.pyplot as plt
     import pandas as pd
-    import pyFAI
-    import h5py
     from pathlib import Path
     
     # Наши инструменты
@@ -18,8 +16,21 @@ try:
     from tools.basic_tools import *
     from tools.saxs_tools import * 
     from tools.waxs_tools import *
-
-    pi = np.pi
+    from tools.basic_tools import *  # ← это импортирует scan_session
+    
+    # Добавляем функцию scan_session в глобальное пространство
+    from tools.basic_tools.experiment_catalog import scan_session
+    
+    # Настройка графиков
+    plt.rcParams['figure.figsize'] = [10, 6]
+    plt.rcParams['font.size'] = 12
+    
+    # Полезные переменные
+    current_dir = Path.cwd()
+    data_dir = current_dir / "data"
+    results_dir = current_dir / "results"
+    data_dir.mkdir(exist_ok=True)
+    results_dir.mkdir(exist_ok=True)
     
     print("✓ Рабочее пространство готово")
     
