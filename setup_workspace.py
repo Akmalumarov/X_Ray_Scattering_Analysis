@@ -1,6 +1,6 @@
 # setup_workspace.py
 """
-Автоматическая настройка рабочего пространства SAXS/WAXS
+Automated SAXS/WAXS workspace setup
 """
 
 import sys
@@ -10,32 +10,36 @@ try:
     import matplotlib.pyplot as plt
     import pandas as pd
     from pathlib import Path
+    import scipy as sp
+    from scipy.optimize import curve_fit
+    import pyFAI
+    import h5py
+    import fabio
     
-    # Наши инструменты
+    # Our tools
     from tools import *
     from tools.basic_tools import *
     from tools.saxs_tools import * 
     from tools.waxs_tools import *
-    from tools.basic_tools import *  # ← это импортирует scan_session
     
-    # Добавляем функцию scan_session в глобальное пространство
+    # Add scan_session to global namespace
     from tools.basic_tools.experiment_catalog import scan_session
     
-    # Настройка графиков
+    # Plot settings
     plt.rcParams['figure.figsize'] = [10, 6]
     plt.rcParams['font.size'] = 12
     
-    # Полезные переменные
+    # Useful variables
     current_dir = Path.cwd()
     data_dir = current_dir / "data"
     results_dir = current_dir / "results"
     data_dir.mkdir(exist_ok=True)
     results_dir.mkdir(exist_ok=True)
     
-    print("✓ Рабочее пространство готово")
+    print("✓ Workspace ready")
     
 except ImportError as e:
-    print(f"✗ Ошибка импорта: {e}")
-    print("Выполните: pip install -e .")
+    print(f"✗ Import error: {e}")
+    print("Run: pip install -e .")
 except Exception as e:
-    print(f"✗ Ошибка: {e}")
+    print(f"✗ Error: {e}")

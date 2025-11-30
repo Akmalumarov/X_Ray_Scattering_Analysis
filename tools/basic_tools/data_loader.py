@@ -5,9 +5,10 @@ import h5py
 import numpy as np
 from typing import List, Tuple, Optional, Dict
 import pandas as pd
+from pathlib import Path
 
 class BM26_experiment:
-    """Класс для работы с экспериментальными данными BM26"""
+    """Class for working with BM26 experimental data"""
     
     def __init__(self, base_path: str):
         self.base_path = base_path
@@ -26,7 +27,8 @@ class BM26_experiment:
                     return item_path
         return ""
     
-    def get_SAXS_paths(self) -> List[str]:
+    def get_1d_SAXS_paths(self) -> List[str]:
+        """Get paths to 1D SAXS .dat files"""
         saxs_dir = os.path.join(self.base_path, 'SAXS')
         int_dir = self._find_int_folder(saxs_dir)
         
@@ -47,7 +49,8 @@ class BM26_experiment:
         
         return dat_files
     
-    def get_WAXS_paths(self) -> List[str]:
+    def get_1d_WAXS_paths(self) -> List[str]:
+        """Get paths to 1D WAXS .dat files"""
         waxs_dir = os.path.join(self.base_path, 'WAXS')
         int_dir = self._find_int_folder(waxs_dir)
         
@@ -67,6 +70,34 @@ class BM26_experiment:
         }
         
         return dat_files
+
+    def get_2d_SAXS_paths(self) -> List[str]:
+        """Get paths to all 2D SAXS EDF files"""
+        if self.saxs_paths is None:
+            self.get_1d_SAXS_paths()
+        
+        edf_dir = self.saxs_paths['edf']
+        edf_files = sorted([
+            os.path.join(edf_dir, f) 
+            for f in os.listdir(edf_dir) 
+            if f.endswith('.edf') and not f.startswith('.')
+        ])
+        
+        return edf_files
+
+    def get_2d_WAXS_paths(self) -> List[str]:
+        """Get paths to all 2D WAXS EDF files"""
+        if self.waxs_paths is None:
+            self.get_1d_WAXS_paths()
+        
+        edf_dir = self.waxs_paths['edf']
+        edf_files = sorted([
+            os.path.join(edf_dir, f) 
+            for f in os.listdir(edf_dir) 
+            if f.endswith('.edf') and not f.startswith('.')
+        ])
+        
+        return edf_files
     
     def read_1d_dat(self, path_to_file: str) -> List[np.ndarray]:
         try:
@@ -76,24 +107,24 @@ class BM26_experiment:
                 intensity = data[:, 1]
                 return [q, intensity]
             else:
-                print(f"Некорректный формат данных в файле {path_to_file}")
+                print(f"Invalid data format in file {path_to_file}")
                 return [np.array([]), np.array([])]
         except Exception as e:
-            print(f"Ошибка при чтении файла {path_to_file}: {e}")
+            print(f"Error reading file {path_to_file}: {e}")
             return [np.array([]), np.array([])]
     
     def get_1d_SAXS(self, index: int = 0) -> List[np.ndarray]:
         if self.saxs_paths is None:
-            self.get_SAXS_paths()
+            self.get_1d_SAXS_paths()
         
         dat_files = self.saxs_paths['dat_files']
         
         if not dat_files:
-            print("Нет доступных SAXS .dat файлов")
+            print("No available SAXS .dat files")
             return [np.array([]), np.array([])]
         
         if index < 0 or index >= len(dat_files):
-            print(f"Индекс {index} вне диапазона. Доступно файлов: {len(dat_files)}")
+            print(f"Index {index} out of range. Available files: {len(dat_files)}")
             return [np.array([]), np.array([])]
         
         file_path = dat_files[index]
@@ -101,16 +132,16 @@ class BM26_experiment:
     
     def get_1d_WAXS(self, index: int = 0) -> List[np.ndarray]:
         if self.waxs_paths is None:
-            self.get_WAXS_paths()
+            self.get_1d_WAXS_paths()
         
         dat_files = self.waxs_paths['dat_files']
         
         if not dat_files:
-            print("Нет доступных WAXS .dat файлов")
+            print("No available WAXS .dat files")
             return [np.array([]), np.array([])]
         
         if index < 0 or index >= len(dat_files):
-            print(f"Индекс {index} вне диапазона. Доступно файлов: {len(dat_files)}")
+            print(f"Index {index} out of range. Available files: {len(dat_files)}")
             return [np.array([]), np.array([])]
         
         file_path = dat_files[index]
@@ -121,18 +152,18 @@ class BM26_experiment:
         
         if detector.upper() == 'SAXS':
             if self.saxs_paths is None:
-                self.get_SAXS_paths()
+                self.get_1d_SAXS_paths()
             edf_path = self.saxs_paths['edf']
         elif detector.upper() == 'WAXS':
             if self.waxs_paths is None:
-                self.get_WAXS_paths()
+                self.get_1d_WAXS_paths()
             edf_path = self.waxs_paths['edf']
         else:
-            print(f"Неизвестный детектор: {detector}")
+            print(f"Unknown detector: {detector}")
             return T
         
         if not os.path.exists(edf_path):
-            print(f"Папка {edf_path} не существует")
+            print(f"Directory {edf_path} does not exist")
             return T
         
         try:
@@ -140,10 +171,10 @@ class BM26_experiment:
                               if not f.startswith('.') and f.endswith('.edf')])
             
             if not files_edf:
-                print(f"В папке {edf_path} не найдено EDF файлов")
+                print(f"No EDF files found in {edf_path}")
                 return T
             
-            print(f"Найдено {len(files_edf)} EDF файлов в {detector}")
+            print(f"Found {len(files_edf)} EDF files in {detector}")
             
             for file in files_edf:
                 file_path = os.path.join(edf_path, file)
@@ -162,20 +193,101 @@ class BM26_experiment:
                                 except ValueError:
                                     continue
                         else:
-                            print(f"Температура не найдена в файле {file}")
+                            print(f"Temperature not found in file {file}")
                             T.append(np.nan)
                 except Exception as e:
-                    print(f"Ошибка при чтении файла {file}: {e}")
+                    print(f"Error reading file {file}: {e}")
                     T.append(np.nan)
                     
         except Exception as e:
-            print(f"Ошибка при доступе к папке {edf_path}: {e}")
+            print(f"Error accessing directory {edf_path}: {e}")
         
         return T
 
+    def get_Tr_profile(self):
+        paths = self.get_2d_SAXS_paths()
+        number_of_frames = len(paths)
+
+        Tr_array = []
+
+        for frame in range(number_of_frames):
+            edf = fabio.open(paths[frame])
+            Photo = edf.header.get('Photo')
+            Monitor = edf.header.get('Monitor')
+
+            Tr_array.append(float(Photo)/float(Monitor))
+
+        return Tr_array
+
+    def integrate1d_SAXS(self, ai, npt, mask=None, unit='q_nm^-1'):
+        paths = self.get_2d_SAXS_paths()
+        number_of_frames = len(paths)
+
+        results = []
+
+        for frame in range(number_of_frames):
+            img = fabio.open(paths[frame]).data
+
+            res_1D = ai.integrate1d(img, npt, mask=mask, unit=unit)
+            results.append(res_1D[1])
+            
+        return res_1D[0], results
+
+    def integrate1d_WAXS(self, ai, npt, mask=None, unit='q_nm^-1'):
+        paths = self.get_2d_WAXS_paths()
+        number_of_frames = len(paths)
+
+        results = []
+
+        for frame in range(number_of_frames):
+            img = fabio.open(paths[frame]).data
+
+            res_1D = ai.integrate1d(img, npt, mask=mask, unit=unit)
+            results.append(res_1D[1])
+            
+        return res_1D[0], results
+
+    def integrate2d_SAXS(self, ai, npt, mask=None, unit='q_nm^-1', azim=True):
+        paths = self.get_2d_SAXS_paths()
+        number_of_frames = len(paths)
+
+        results = []
+
+        if azim == False:
+            for frame in range(number_of_frames):
+                img = fabio.open(paths[frame]).data
+                res_2D = ai.integrate2d(img, npt, mask=mask, unit=("qx_nm^-1","qy_nm^-1"))
+                results.append(res_2D)
+            return results
+        if azim == True:
+            for frame in range(number_of_frames):
+                img = fabio.open(paths[frame]).data
+                res_2D = ai.integrate2d(img, npt, mask=mask, unit='q_nm^-1')
+                results.append(res_2D)
+            return results
+
+    def integrate2d_WAXS(self, ai, npt, mask=None, unit='q_nm^-1', azim=True):
+        paths = self.get_2d_WAXS_paths()
+        number_of_frames = len(paths)
+
+        results = []
+
+        if azim == False:
+            for frame in range(number_of_frames):
+                img = fabio.open(paths[frame]).data
+                res_2D = ai.integrate2d(img, npt, mask=mask, unit=("qx_nm^-1","qy_nm^-1"))
+                results.append(res_2D)
+            return results
+        if azim == True:
+            for frame in range(number_of_frames):
+                img = fabio.open(paths[frame]).data
+                res_2D = ai.integrate2d(img, npt, mask=mask, unit='q_nm^-1')
+                results.append(res_2D)
+            return results
+        
 
 class ID02_experiment:
-    """Класс для работы с экспериментальными данными ID02"""
+    """Class for working with ID02 experimental data"""
     
     def __init__(self, base_path: str):
         self.base_path = base_path
@@ -184,7 +296,7 @@ class ID02_experiment:
         self._scan_files()
     
     def _scan_files(self):
-        """Сканирует файлы и разделяет на SAXS/WAXS"""
+        """Scan files and separate into SAXS/WAXS"""
         for file_path in Path(self.base_path).rglob("*_ave.h5"):
             if "av_ave" not in file_path.name:
                 if "eiger2" in file_path.name:
@@ -196,20 +308,20 @@ class ID02_experiment:
         self.waxs_files.sort()
     
     def read_h5(self, path: str) -> Tuple[np.ndarray, np.ndarray]:
-        """Чтение HDF5 файла ID02"""
+        """Read ID02 HDF5 file"""
         with h5py.File(path, 'r') as file:
             data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
             q = file['entry_0000']['PyFAI']['result_ave']['q'][0:]
             return q, data
     
     def get_1d_SAXS(self, frame: int = 0) -> List[np.ndarray]:
-        """Получить SAXS данные по номеру кадра"""
+        """Get SAXS data by frame number"""
         if not self.saxs_files:
-            print("Нет доступных SAXS файлов")
+            print("No available SAXS files")
             return [np.array([]), np.array([])]
         
         if frame < 0 or frame >= len(self.saxs_files):
-            print(f"Кадр {frame} вне диапазона. Доступно файлов: {len(self.saxs_files)}")
+            print(f"Frame {frame} out of range. Available files: {len(self.saxs_files)}")
             return [np.array([]), np.array([])]
         
         file_path = self.saxs_files[frame]
@@ -217,15 +329,57 @@ class ID02_experiment:
         return [q, data[frame]] if data.ndim > 1 else [q, data]
     
     def get_1d_WAXS(self, frame: int = 0) -> List[np.ndarray]:
-        """Получить WAXS данные по номеру кадра"""
+        """Get WAXS data by frame number"""
         if not self.waxs_files:
-            print("Нет доступных WAXS файлов")
+            print("No available WAXS files")
             return [np.array([]), np.array([])]
         
         if frame < 0 or frame >= len(self.waxs_files):
-            print(f"Кадр {frame} вне диапазона. Доступно файлов: {len(self.waxs_files)}")
+            print(f"Frame {frame} out of range. Available files: {len(self.waxs_files)}")
             return [np.array([]), np.array([])]
         
         file_path = self.waxs_files[frame]
         q, data = self.read_h5(file_path)
         return [q, data[frame]] if data.ndim > 1 else [q, data]
+
+# Functions for other files
+def list_all_files(folder_path):
+    """
+    Get all file paths in a folder and its subfolders
+    
+    Args:
+        folder_path: path to the folder
+        
+    Returns:
+        list of all file paths
+    """
+    from pathlib import Path
+    
+    folder = Path(folder_path)
+    if not folder.exists():
+        print(f"Folder {folder_path} does not exist")
+        return []
+    
+    file_paths = [str(file) for file in folder.rglob('*') if file.is_file()]
+    return sorted(file_paths)
+
+def list_experiments(session_path):
+    """
+    Get paths to experiment folders (top level only)
+    
+    Args:
+        session_path: path to the session folder
+        
+    Returns:
+        list of experiment folder paths
+    """
+    from pathlib import Path
+    
+    session = Path(session_path)
+    if not session.exists():
+        print(f"Session folder {session_path} does not exist")
+        return []
+    
+    # Get only immediate subdirectories (top level)
+    experiments = [str(item) for item in session.iterdir() if item.is_dir()]
+    return sorted(experiments)
