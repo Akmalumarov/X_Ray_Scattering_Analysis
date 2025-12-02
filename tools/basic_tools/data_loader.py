@@ -284,7 +284,19 @@ class BM26_experiment:
                 res_2D = ai.integrate2d(img, npt, mask=mask, unit='q_nm^-1')
                 results.append(res_2D)
             return results
-        
+
+    def subtract(self, I, Tr = None):
+        paths = self.get_2d_SAXS_paths()
+        number_of_frames = len(paths)
+        Tr_array = self.get_Tr_profile()
+        results = []
+
+        for frame in range(number_of_frames):
+            q, I = self.get_1d_SAXS(frame)
+            results.append(I / Tr_array[frame] - I / Tr)
+        return q, results
+
+    def average_1d()
 
 class ID02_experiment:
     """Class for working with ID02 experimental data"""
