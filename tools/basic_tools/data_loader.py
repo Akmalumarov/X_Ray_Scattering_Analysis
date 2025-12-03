@@ -8,7 +8,6 @@ import pandas as pd
 from pathlib import Path
 
 class BM26_experiment:
-    """Class for working with BM26 experimental data"""
     
     def __init__(self, base_path: str):
         self.base_path = base_path
@@ -28,7 +27,6 @@ class BM26_experiment:
         return ""
     
     def get_1d_SAXS_paths(self) -> List[str]:
-        """Get paths to 1D SAXS .dat files"""
         saxs_dir = os.path.join(self.base_path, 'SAXS')
         int_dir = self._find_int_folder(saxs_dir)
         
@@ -50,7 +48,6 @@ class BM26_experiment:
         return dat_files
     
     def get_1d_WAXS_paths(self) -> List[str]:
-        """Get paths to 1D WAXS .dat files"""
         waxs_dir = os.path.join(self.base_path, 'WAXS')
         int_dir = self._find_int_folder(waxs_dir)
         
@@ -72,7 +69,6 @@ class BM26_experiment:
         return dat_files
 
     def get_2d_SAXS_paths(self) -> List[str]:
-        """Get paths to all 2D SAXS EDF files"""
         if self.saxs_paths is None:
             self.get_1d_SAXS_paths()
         
@@ -86,7 +82,6 @@ class BM26_experiment:
         return edf_files
 
     def get_2d_WAXS_paths(self) -> List[str]:
-        """Get paths to all 2D WAXS EDF files"""
         if self.waxs_paths is None:
             self.get_1d_WAXS_paths()
         
@@ -214,7 +209,6 @@ class BM26_experiment:
             edf = fabio.open(paths[frame])
             Photo = edf.header.get('Photo')
             Monitor = edf.header.get('Monitor')
-
             Tr_array.append(float(Photo)/float(Monitor))
 
         return Tr_array
@@ -222,12 +216,10 @@ class BM26_experiment:
     def integrate1d_SAXS(self, ai, npt, mask=None, unit='q_nm^-1'):
         paths = self.get_2d_SAXS_paths()
         number_of_frames = len(paths)
-
         results = []
 
         for frame in range(number_of_frames):
             img = fabio.open(paths[frame]).data
-
             res_1D = ai.integrate1d(img, npt, mask=mask, unit=unit)
             results.append(res_1D[1])
             
@@ -236,70 +228,73 @@ class BM26_experiment:
     def integrate1d_WAXS(self, ai, npt, mask=None, unit='q_nm^-1'):
         paths = self.get_2d_WAXS_paths()
         number_of_frames = len(paths)
-
         results = []
 
         for frame in range(number_of_frames):
             img = fabio.open(paths[frame]).data
-
             res_1D = ai.integrate1d(img, npt, mask=mask, unit=unit)
             results.append(res_1D[1])
             
         return res_1D[0], results
-
+        
     def integrate2d_SAXS(self, ai, npt, mask=None, unit='q_nm^-1', azim=True):
         paths = self.get_2d_SAXS_paths()
         number_of_frames = len(paths)
-
         results = []
 
         if azim == False:
             for frame in range(number_of_frames):
                 img = fabio.open(paths[frame]).data
-                res_2D = ai.integrate2d(img, npt, mask=mask, unit=("qx_nm^-1","qy_nm^-1"))
+                res_2D = ai.integrate2d(img, npt, mask=mask, unit=("qx_nm^-1", "qy_nm^-1"))
                 results.append(res_2D)
             return results
-        if azim == True:
+        else:  # azim == True
             for frame in range(number_of_frames):
                 img = fabio.open(paths[frame]).data
-                res_2D = ai.integrate2d(img, npt, mask=mask, unit='q_nm^-1')
+                res_2D = ai.integrate2d(img, npt, mask=mask, unit=unit)
                 results.append(res_2D)
             return results
 
     def integrate2d_WAXS(self, ai, npt, mask=None, unit='q_nm^-1', azim=True):
         paths = self.get_2d_WAXS_paths()
         number_of_frames = len(paths)
-
         results = []
 
         if azim == False:
             for frame in range(number_of_frames):
                 img = fabio.open(paths[frame]).data
-                res_2D = ai.integrate2d(img, npt, mask=mask, unit=("qx_nm^-1","qy_nm^-1"))
+                res_2D = ai.integrate2d(img, npt, mask=mask, unit=("qx_nm^-1", "qy_nm^-1"))
                 results.append(res_2D)
             return results
-        if azim == True:
+        else:  # azim == True
             for frame in range(number_of_frames):
                 img = fabio.open(paths[frame]).data
-                res_2D = ai.integrate2d(img, npt, mask=mask, unit='q_nm^-1')
+                res_2D = ai.integrate2d(img, npt, mask=mask, unit=unit)
                 results.append(res_2D)
             return results
 
-    def subtract(self, I, Tr = None):
+    def subtract(self, I, Tr=None):
         paths = self.get_2d_SAXS_paths()
         number_of_frames = len(paths)
         Tr_array = self.get_Tr_profile()
         results = []
 
         for frame in range(number_of_frames):
-            q, I = self.get_1d_SAXS(frame)
-            results.append(I / Tr_array[frame] - I / Tr)
+            q, I_curr = self.get_1d_SAXS(frame)
+            results.append(I_curr / Tr_array[frame] - I / Tr)
         return q, results
 
-    def average_1d()
+    def average_1d(self, frames):
+        q, I = self.get_1d_SAXS(0)
+        I *= 0
+        for frame in frames:
+            q, I_fr = self.get_1d_SAXS(frame)
+            I += I_fr
+        I /= len(frames)
+        return q, I
+
 
 class ID02_experiment:
-    """Class for working with ID02 experimental data"""
     
     def __init__(self, base_path: str):
         self.base_path = base_path
@@ -308,7 +303,6 @@ class ID02_experiment:
         self._scan_files()
     
     def _scan_files(self):
-        """Scan files and separate into SAXS/WAXS"""
         for file_path in Path(self.base_path).rglob("*_ave.h5"):
             if "av_ave" not in file_path.name:
                 if "eiger2" in file_path.name:
@@ -320,14 +314,12 @@ class ID02_experiment:
         self.waxs_files.sort()
     
     def read_h5(self, path: str) -> Tuple[np.ndarray, np.ndarray]:
-        """Read ID02 HDF5 file"""
         with h5py.File(path, 'r') as file:
             data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
             q = file['entry_0000']['PyFAI']['result_ave']['q'][0:]
             return q, data
     
     def get_1d_SAXS(self, frame: int = 0) -> List[np.ndarray]:
-        """Get SAXS data by frame number"""
         if not self.saxs_files:
             print("No available SAXS files")
             return [np.array([]), np.array([])]
@@ -341,7 +333,6 @@ class ID02_experiment:
         return [q, data[frame]] if data.ndim > 1 else [q, data]
     
     def get_1d_WAXS(self, frame: int = 0) -> List[np.ndarray]:
-        """Get WAXS data by frame number"""
         if not self.waxs_files:
             print("No available WAXS files")
             return [np.array([]), np.array([])]
@@ -354,17 +345,8 @@ class ID02_experiment:
         q, data = self.read_h5(file_path)
         return [q, data[frame]] if data.ndim > 1 else [q, data]
 
-# Functions for other files
+
 def list_all_files(folder_path):
-    """
-    Get all file paths in a folder and its subfolders
-    
-    Args:
-        folder_path: path to the folder
-        
-    Returns:
-        list of all file paths
-    """
     from pathlib import Path
     
     folder = Path(folder_path)
@@ -375,16 +357,18 @@ def list_all_files(folder_path):
     file_paths = [str(file) for file in folder.rglob('*') if file.is_file()]
     return sorted(file_paths)
 
+
 def list_experiments(session_path):
-    """
-    Get paths to experiment folders (top level only)
+    from pathlib import Path
     
-    Args:
-        session_path: path to the session folder
-        
-    Returns:
-        list of experiment folder paths
-    """
+    session = Path(session_path)
+    if not session.exists():
+        print(f"Session folder {session_path} does not exist")
+        return []
+    
+    experiments = [str(item) for item in session.iterdir() if item.is_dir()]
+    return sorted(experiments)  
+    
     from pathlib import Path
     
     session = Path(session_path)
