@@ -313,37 +313,37 @@ class ID02_experiment:
         self.saxs_files.sort()
         self.waxs_files.sort()
     
-    def read_h5(self, path: str) -> Tuple[np.ndarray, np.ndarray]:
-        with h5py.File(path, 'r') as file:
+    def get_1d_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        with h5py.File(self.base_path, 'r') as file:
             data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
             q = file['entry_0000']['PyFAI']['result_ave']['q'][0:]
             return q, data
     
-    def get_1d_SAXS(self, frame: int = 0) -> List[np.ndarray]:
-        if not self.saxs_files:
-            print("No available SAXS files")
-            return [np.array([]), np.array([])]
+    # def get_1d_SAXS(self, frame: int = 0) -> List[np.ndarray]:
+    #     if not self.saxs_files:
+    #         print("No available SAXS files")
+    #         return [np.array([]), np.array([])]
         
-        if frame < 0 or frame >= len(self.saxs_files):
-            print(f"Frame {frame} out of range. Available files: {len(self.saxs_files)}")
-            return [np.array([]), np.array([])]
+    #     if frame < 0 or frame >= len(self.saxs_files):
+    #         print(f"Frame {frame} out of range. Available files: {len(self.saxs_files)}")
+    #         return [np.array([]), np.array([])]
         
-        file_path = self.saxs_files[frame]
-        q, data = self.read_h5(file_path)
-        return [q, data[frame]] if data.ndim > 1 else [q, data]
+    #     file_path = self.saxs_files[frame]
+    #     q, data = self.read_h5(file_path)
+    #     return [q, data[frame]] if data.ndim > 1 else [q, data]
     
-    def get_1d_WAXS(self, frame: int = 0) -> List[np.ndarray]:
-        if not self.waxs_files:
-            print("No available WAXS files")
-            return [np.array([]), np.array([])]
+    # def get_1d_WAXS(self, frame: int = 0) -> List[np.ndarray]:
+    #     if not self.waxs_files:
+    #         print("No available WAXS files")
+    #         return [np.array([]), np.array([])]
         
-        if frame < 0 or frame >= len(self.waxs_files):
-            print(f"Frame {frame} out of range. Available files: {len(self.waxs_files)}")
-            return [np.array([]), np.array([])]
+    #     if frame < 0 or frame >= len(self.waxs_files):
+    #         print(f"Frame {frame} out of range. Available files: {len(self.waxs_files)}")
+    #         return [np.array([]), np.array([])]
         
-        file_path = self.waxs_files[frame]
-        q, data = self.read_h5(file_path)
-        return [q, data[frame]] if data.ndim > 1 else [q, data]
+    #     file_path = self.waxs_files[frame]
+    #     q, data = self.read_h5(file_path)
+    #     return [q, data[frame]] if data.ndim > 1 else [q, data]
 
 
 def list_all_files(folder_path):
