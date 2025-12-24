@@ -197,7 +197,7 @@ class BM26_experiment:
         except Exception as e:
             print(f"Error accessing directory {edf_path}: {e}")
         
-        return T
+        return np.array(T)
 
     def get_Tr_profile(self):
         paths = self.get_2d_SAXS_paths()
@@ -211,7 +211,45 @@ class BM26_experiment:
             Monitor = edf.header.get('Monitor')
             Tr_array.append(float(Photo)/float(Monitor))
 
-        return Tr_array
+        return np.array(Tr_array)
+
+    def get_DSC_profile(self):
+        paths = self.get_2d_SAXS_paths()
+        number_of_frames = len(paths)
+
+        DSC_array = []
+
+        for frame in range(number_of_frames):
+            edf = fabio.open(paths[frame])
+            DSC = float(edf.header.get('DSClink'))
+            DSC_array.append(DSC)
+
+        return np.array(DSC_array)
+
+
+    def get_Time_profile(self):
+        paths = self.get_2d_SAXS_paths()
+        number_of_frames = len(paths)
+
+        edf0 = fabio.open(paths[0])
+        hrs0 = int((edf0.header['time'].split()[3]).split(':')[0])*3600
+        mts0 = int((edf0.header['time'].split()[3]).split(':')[1])*60
+        sec0 = int((edf0.header['time'].split()[3]).split(':')[2])
+        time0 = hrs0+mts0+sec0
+
+
+        Time_array = []
+
+        for frame in range(number_of_frames):
+            edf = fabio.open(paths[frame])
+            hrs = int((edf.header['time'].split()[3]).split(':')[0])*3600
+            mts = int((edf.header['time'].split()[3]).split(':')[1])*60
+            sec = int((edf.header['time'].split()[3]).split(':')[2])
+            time = hrs + mts + sec - time0
+
+            Time_array.append(time)
+
+        return np.array(Time_array)
 
     def integrate1d_SAXS(self, ai, npt, mask=None, unit='q_nm^-1'):
         paths = self.get_2d_SAXS_paths()
@@ -345,6 +383,30 @@ class ID02_experiment:
     #     q, data = self.read_h5(file_path)
     #     return [q, data[frame]] if data.ndim > 1 else [q, data]
 
+class ID13_experiment:
+    
+    def __init__(self, base_path: str):
+        self.base_path = base_path
+        self.saxs_files = []
+        self.waxs_files = []
+        self._scan_files()
+    
+    def _scan_files(self):
+        for file_path in Path(self.base_path).rglob("*_ave.h5"):
+            if "av_ave" not in file_path.name:
+                if "eiger2" in file_path.name:
+                    self.saxs_files.append(str(file_path))
+                else:
+                    self.waxs_files.append(str(file_path))
+        
+        self.saxs_files.sort()
+        self.waxs_files.sort()
+    
+    def get_1d_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        with h5py.File(self.base_path, 'r') as file:
+            data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
+            q = file['entry_0000']['PyFAI']['result_ave']['q'][0:]
+            return q, data
 
 def list_all_files(folder_path):
     from pathlib import Path
