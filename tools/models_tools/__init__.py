@@ -1,18 +1,5 @@
-
-from .peaks import Gaussian
-
-from .background import PowerLaw
-
 from .composite import CompositeModel
+from .core_models import *
 
-# Утилиты
-from .utils import list_models, create_model
-
-# Все доступные классы
-__all__ = [
-    'Gaussian',
-    'PowerLaw',
-    'CompositeModel',
-    'list_models',
-    'create_model',
-]
+# Просто экспортируем всё
+# Python сам разберётся
