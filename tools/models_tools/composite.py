@@ -83,3 +83,37 @@ class CompositeModel:
         """String representation of the model"""
         comp_names = [name for name, _ in self.component_info]
         return f"CompositeModel({', '.join(comp_names)}) with {self.n_params} params"
+
+    def plot_components(self, x, params, ax=None):
+        """
+        Plot individual components of the composite model
+        """
+        import matplotlib.pyplot as plt
+        
+        if ax is None:
+            ax = plt.gca()
+        
+        if len(params) != self.n_params:
+            raise ValueError(f"Expected {self.n_params} parameters, got {len(params)}")
+        
+        # Plot each component
+        for i, (func, param_slice, (name, _)) in enumerate(zip(self.components, 
+                                                              self.param_slices, 
+                                                              self.component_info)):
+            if param_slice.start == param_slice.stop:
+                y_component = func(x)
+            else:
+                y_component = func(x, *params[param_slice])
+            
+            ax.plot(x, y_component, '--', alpha=0.7, 
+                    label=f'{name} (comp {i})', 
+                    linewidth=1.5)
+        
+        # Plot total model
+        y_total = self(x, *params)
+        ax.plot(x, y_total, 'k-', label='Total fit', linewidth=2)
+        
+        ax.legend()
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        return ax
