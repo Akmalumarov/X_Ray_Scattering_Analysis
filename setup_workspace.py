@@ -21,6 +21,7 @@ try:
     from tools.basic_tools import *
     from tools.saxs_tools import * 
     from tools.waxs_tools import *
+    from tools.models_tools import *
     
     # Add scan_session to global namespace
     from tools.basic_tools.experiment_catalog import scan_session
