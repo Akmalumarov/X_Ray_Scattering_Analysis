@@ -15,6 +15,8 @@ try:
     import pyFAI
     import h5py
     import fabio
+    import os
+    import matplotlib.ticker as mticker
     
     # Our tools
     from tools import *
@@ -36,8 +38,6 @@ try:
     results_dir = current_dir / "results"
     data_dir.mkdir(exist_ok=True)
     results_dir.mkdir(exist_ok=True)
-    
-    print("✓ Workspace ready")
     
 except ImportError as e:
     print(f"✗ Import error: {e}")
