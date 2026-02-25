@@ -213,6 +213,22 @@ class BM26_experiment:
 
         return np.array(Tr_array)
 
+    def get_Photo(self):
+        paths = self.get_2d_SAXS_paths()
+        number_of_frames = len(paths)
+
+        Tr_array = []
+
+        for frame in range(number_of_frames):
+            edf = fabio.open(paths[frame])
+            Photo = edf.header.get('Photo')
+            Monitor = edf.header.get('Monitor')
+            Tr_array.append(float(Photo))
+
+        return np.array(Tr_array)
+
+        
+
     def get_DSC_profile(self):
         paths = self.get_2d_SAXS_paths()
         number_of_frames = len(paths)
