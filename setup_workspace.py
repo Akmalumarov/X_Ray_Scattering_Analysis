@@ -17,6 +17,7 @@ try:
     import fabio
     import os
     import matplotlib.ticker as mticker
+    import plotly.express as px
     
     # Our tools
     from tools import *
