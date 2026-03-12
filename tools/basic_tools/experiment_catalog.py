@@ -41,7 +41,12 @@ def _scan_id02_session(session_path):
     experiments = []
     
     for file_path in session_path.rglob("*_ave.h5"):
-        if "eiger2" in file_path.name and "av_ave" not in file_path.name:
+        if ("eiger2" in file_path.name and 
+        "av_ave" not in file_path.name and
+        "av_sub_merged_ave" not in file_path.name and    
+        "av_sub_sub_ave" not in file_path.name and
+        "rebin_ave.h5" not in file_path.name and
+        "av_sub_ave" not in file_path.name):
             try:
                 with h5py.File(file_path, 'r') as file:
                     title = file['entry_0000']['PyFAI']['eiger2']['header']['Title'][()]
