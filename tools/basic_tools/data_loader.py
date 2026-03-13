@@ -347,26 +347,14 @@ class BM26_experiment:
         I /= len(frames)
         return q, I
 
-from typing import Tuple, List, Optional, Union
-
-
 class ID02_experiment:
     
     def __init__(self, file_path: str):
-        """
-        Инициализация эксперимента ID02.
-        
-        Args:
-            file_path: Путь к любому файлу с суффиксом _ave.h5, _norm.h5 или _azim.h5
-        """
         self.base_path = file_path
-        
-        # Определяем базовое имя файла без суффикса
         path_obj = Path(file_path)
         self.directory = path_obj.parent
-        self.filename_stem = path_obj.stem  # Полное имя без расширения
+        self.filename_stem = path_obj.stem
         
-        # Убираем суффикс для получения основы
         for suffix in ['_ave', '_norm', '_azim']:
             if self.filename_stem.endswith(suffix):
                 self.file_basename = self.filename_stem[:-len(suffix)]
@@ -374,255 +362,178 @@ class ID02_experiment:
         else:
             self.file_basename = self.filename_stem
         
-        # Формируем пути ко всем трём типам файлов
         self.ave_path = os.path.join(self.directory, f"{self.file_basename}_ave.h5")
         self.norm_path = os.path.join(self.directory, f"{self.file_basename}_norm.h5")
         self.azim_path = os.path.join(self.directory, f"{self.file_basename}_azim.h5")
         
-        # Проверяем существование файлов
         self.has_ave = os.path.exists(self.ave_path)
         self.has_norm = os.path.exists(self.norm_path)
         self.has_azim = os.path.exists(self.azim_path)
-        
-        if not (self.has_ave or self.has_norm or self.has_azim):
-            print(f"Предупреждение: Не найдено ни одного файла для {self.file_basename}")
     
-    def get_Title(self) -> str:
-        """
-        Получить заголовок эксперимента из файла.
-        Ищет в _ave.h5, если нет - в _azim.h5, если нет - в _norm.h5
-        """
-        # Пробуем сначала _ave.h5
-        if self.has_ave:
-            try:
-                with h5py.File(self.ave_path, 'r') as file:
-                    title = file['entry_0000']['PyFAI']['eiger2']['header']['Title'][()]
-                    if isinstance(title, bytes):
-                        title = title.decode('utf-8')
-                    return title
-            except:
-                pass
+    def show_tree(self, file_type='ave', max_depth=None):
+        """Печатает дерево HDF5 файла"""
+        path = getattr(self, f"{file_type}_path", None)
+        if not path or not os.path.exists(path):
+            print(f"File not found: {path}")
+            return
         
-        # Пробуем _azim.h5
-        if self.has_azim:
-            try:
-                with h5py.File(self.azim_path, 'r') as file:
-                    title = file['entry_0000']['PyFAI']['eiger2']['header']['Title'][()]
-                    if isinstance(title, bytes):
-                        title = title.decode('utf-8')
-                    return title
-            except:
-                pass
+        def _print(obj, indent=0, depth=0):
+            if max_depth and depth > max_depth:
+                print('  ' * indent + '├─ ...')
+                return
+            for key in obj.keys():
+                print('  ' * indent + f'├─ {key}')
+                if isinstance(obj[key], h5py.Group):
+                    _print(obj[key], indent + 1, depth + 1)
         
-        # Пробуем _norm.h5
-        if self.has_norm:
-            try:
-                with h5py.File(self.norm_path, 'r') as file:
-                    title = file['entry_0000']['PyFAI']['eiger2']['header']['Title'][()]
-                    if isinstance(title, bytes):
-                        title = title.decode('utf-8')
-                    return title
-            except:
-                pass
-        
+        with h5py.File(path, 'r') as f:
+            _print(f)
+    
+    def _find_title(self, obj):
+        """Рекурсивно ищет первый ключ с title и возвращает значение"""
+        for key in obj.keys():
+            if 'title' in key.lower():
+                try:
+                    val = obj[key][()]
+                    return val.decode('utf-8') if isinstance(val, bytes) else str(val)
+                except:
+                    pass
+            if isinstance(obj[key], h5py.Group):
+                val = self._find_title(obj[key])
+                if val:
+                    return val
+        return None
+    
+    def get_Title(self):
+        """Ищет title в _ave, _norm, _azim файлах"""
+        for path in [self.ave_path, self.norm_path, self.azim_path]:
+            if os.path.exists(path):
+                try:
+                    with h5py.File(path, 'r') as f:
+                        title = self._find_title(f)
+                        if title:
+                            return title
+                except:
+                    continue
         return "Title not found"
     
     def get_1d_data(self, frame: int = 0) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Получить 1D проинтегрированные данные из _ave.h5
-        
-        Args:
-            frame: Номер кадра (0-based)
-            
-        Returns:
-            Tuple[q, intensity]
-        """
+        """Возвращает q и intensity из _ave.h5"""
         if not self.has_ave:
-            print(f"Файл _ave.h5 не найден: {self.ave_path}")
+            print(f"No _ave.h5 file found")
             return np.array([]), np.array([])
         
         try:
-            with h5py.File(self.ave_path, 'r') as file:
-                data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
-                q = file['entry_0000']['PyFAI']['result_ave']['q'][:]
+            with h5py.File(self.ave_path, 'r') as f:
+                q = f['entry_0000']['PyFAI']['result_ave']['q'][:]
+                data = f['entry_0000']['PyFAI']['result_ave']['data'][:]
                 
-                # Проверяем размерность данных
                 if data.ndim == 1:
-                    # Одномерные данные
                     return q, data
                 elif data.ndim == 2:
-                    # Многокадровые данные
                     if frame < 0 or frame >= data.shape[0]:
-                        print(f"Кадр {frame} вне диапазона. Доступно кадров: {data.shape[0]}")
+                        print(f"Frame {frame} out of range (0-{data.shape[0]-1})")
                         return np.array([]), np.array([])
                     return q, data[frame]
                 else:
-                    print(f"Неожиданная размерность данных: {data.ndim}")
                     return np.array([]), np.array([])
-                    
         except Exception as e:
-            print(f"Ошибка при чтении {self.ave_path}: {e}")
+            print(f"Error reading 1D data: {e}")
             return np.array([]), np.array([])
     
     def get_2d_data(self, frame: int = 0) -> np.ndarray:
-        """
-        Получить 2D нормированные данные из _norm.h5
-        
-        Args:
-            frame: Номер кадра (0-based)
-            
-        Returns:
-            2D массив (изображение)
-        """
+        """Возвращает 2D изображение из _norm.h5"""
         if not self.has_norm:
-            print(f"Файл _norm.h5 не найден: {self.norm_path}")
+            print(f"No _norm.h5 file found")
             return np.array([])
         
         try:
-            with h5py.File(self.norm_path, 'r') as file:
-                data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
+            with h5py.File(self.norm_path, 'r') as f:
+                data = f['entry_0000']['PyFAI']['result_ave']['data'][:]
                 
-                # Проверяем размерность данных
                 if data.ndim == 2:
-                    # Одно изображение
                     return data
                 elif data.ndim == 3:
-                    # Многокадровые данные
                     if frame < 0 or frame >= data.shape[0]:
-                        print(f"Кадр {frame} вне диапазона. Доступно кадров: {data.shape[0]}")
+                        print(f"Frame {frame} out of range (0-{data.shape[0]-1})")
                         return np.array([])
                     return data[frame]
                 else:
-                    print(f"Неожиданная размерность данных: {data.ndim}")
                     return np.array([])
-                    
         except Exception as e:
-            print(f"Ошибка при чтении {self.norm_path}: {e}")
+            print(f"Error reading 2D data: {e}")
             return np.array([])
     
     def get_azim_data(self, frame: int = 0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Получить азимутальные данные из _azim.h5
-        
-        Args:
-            frame: Номер кадра (0-based)
-            
-        Returns:
-            Tuple[chi, q, data] - где data это 2D массив (chi x q)
-        """
+        """Возвращает chi, q и 2D данные из _azim.h5"""
         if not self.has_azim:
-            print(f"Файл _azim.h5 не найден: {self.azim_path}")
+            print(f"No _azim.h5 file found")
             return np.array([]), np.array([]), np.array([])
         
         try:
-            with h5py.File(self.azim_path, 'r') as file:
-                data = file['entry_0000']['PyFAI']['result_azim']['data'][:]
-                chi = file['entry_0000']['PyFAI']['result_azim']['chi'][:]
-                q = file['entry_0000']['PyFAI']['result_azim']['q'][:]
+            with h5py.File(self.azim_path, 'r') as f:
+                chi = f['entry_0000']['PyFAI']['result_azim']['chi'][:]
+                q = f['entry_0000']['PyFAI']['result_azim']['q'][:]
+                data = f['entry_0000']['PyFAI']['result_azim']['data'][:]
                 
-                # Проверяем размерность данных
                 if data.ndim == 2:
-                    # Одно изображение
                     return chi, q, data
                 elif data.ndim == 3:
-                    # Многокадровые данные
                     if frame < 0 or frame >= data.shape[0]:
-                        print(f"Кадр {frame} вне диапазона. Доступно кадров: {data.shape[0]}")
+                        print(f"Frame {frame} out of range (0-{data.shape[0]-1})")
                         return np.array([]), np.array([]), np.array([])
                     return chi, q, data[frame]
                 else:
-                    print(f"Неожиданная размерность данных: {data.ndim}")
                     return np.array([]), np.array([]), np.array([])
-                    
         except Exception as e:
-            print(f"Ошибка при чтении {self.azim_path}: {e}")
+            print(f"Error reading azimuthal data: {e}")
             return np.array([]), np.array([]), np.array([])
     
-    def get_number_of_frames(self) -> dict:
-        """
-        Получить количество кадров в каждом типе файлов
+    def get_all_1d(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Возвращает все 1D данные (матрица кадры x q)"""
+        if not self.has_ave:
+            return np.array([]), np.array([])
         
-        Returns:
-            Словарь с количеством кадров для каждого типа
-        """
+        try:
+            with h5py.File(self.ave_path, 'r') as f:
+                q = f['entry_0000']['PyFAI']['result_ave']['q'][:]
+                data = f['entry_0000']['PyFAI']['result_ave']['data'][:]
+                
+                if data.ndim == 1:
+                    return q, data.reshape(1, -1)
+                return q, data
+        except:
+            return np.array([]), np.array([])
+    
+    def get_n_frames(self) -> dict:
+        """Возвращает количество кадров в каждом типе файлов"""
         frames = {'ave': 0, 'norm': 0, 'azim': 0}
         
         if self.has_ave:
             try:
-                with h5py.File(self.ave_path, 'r') as file:
-                    data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
+                with h5py.File(self.ave_path, 'r') as f:
+                    data = f['entry_0000']['PyFAI']['result_ave']['data'][:]
                     frames['ave'] = data.shape[0] if data.ndim > 1 else 1
             except:
                 pass
         
         if self.has_norm:
             try:
-                with h5py.File(self.norm_path, 'r') as file:
-                    data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
+                with h5py.File(self.norm_path, 'r') as f:
+                    data = f['entry_0000']['PyFAI']['result_ave']['data'][:]
                     frames['norm'] = data.shape[0] if data.ndim > 2 else 1
             except:
                 pass
         
         if self.has_azim:
             try:
-                with h5py.File(self.azim_path, 'r') as file:
-                    data = file['entry_0000']['PyFAI']['result_azim']['data'][:]
+                with h5py.File(self.azim_path, 'r') as f:
+                    data = f['entry_0000']['PyFAI']['result_azim']['data'][:]
                     frames['azim'] = data.shape[0] if data.ndim > 2 else 1
             except:
                 pass
         
         return frames
-    
-    def get_all_1d_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Получить все 1D данные из _ave.h5 (все кадры сразу)
-        
-        Returns:
-            Tuple[q, all_data] - где all_data это 2D массив (кадры x q)
-        """
-        if not self.has_ave:
-            print(f"Файл _ave.h5 не найден: {self.ave_path}")
-            return np.array([]), np.array([])
-        
-        try:
-            with h5py.File(self.ave_path, 'r') as file:
-                data = file['entry_0000']['PyFAI']['result_ave']['data'][:]
-                q = file['entry_0000']['PyFAI']['result_ave']['q'][:]
-                
-                if data.ndim == 1:
-                    # Преобразуем в 2D для совместимости
-                    return q, data.reshape(1, -1)
-                else:
-                    return q, data
-                    
-        except Exception as e:
-            print(f"Ошибка при чтении {self.ave_path}: {e}")
-            return np.array([]), np.array([])
-    
-    def get_metadata(self) -> dict:
-        """
-        Получить метаданные из файла
-        """
-        metadata = {}
-        
-        # Пробуем получить из _ave.h5
-        if self.has_ave:
-            try:
-                with h5py.File(self.ave_path, 'r') as file:
-                    # Извлекаем доступные метаданные
-                    header = file['entry_0000']['PyFAI']['eiger2']['header']
-                    for key in header.keys():
-                        try:
-                            value = header[key][()]
-                            if isinstance(value, bytes):
-                                value = value.decode('utf-8')
-                            metadata[key] = value
-                        except:
-                            pass
-            except:
-                pass
-        
-        return metadata
 
 def list_all_files(folder_path):
     from pathlib import Path
