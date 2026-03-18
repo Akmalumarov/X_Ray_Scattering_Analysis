@@ -28,6 +28,8 @@ try:
     
     # Add scan_session to global namespace
     from tools.basic_tools.experiment_catalog import scan_session
+
+    from scipy.special import voigt_profile
     
     # Plot settings
     plt.rcParams['figure.figsize'] = [10, 6]
