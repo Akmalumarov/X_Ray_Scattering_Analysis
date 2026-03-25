@@ -25,6 +25,7 @@ try:
     from tools.saxs_tools import * 
     from tools.waxs_tools import *
     from tools.models_tools import *
+    from tools.Fit_tools import *
     
     # Add scan_session to global namespace
     from tools.basic_tools.experiment_catalog import scan_session
@@ -41,6 +42,8 @@ try:
     results_dir = current_dir / "results"
     data_dir.mkdir(exist_ok=True)
     results_dir.mkdir(exist_ok=True)
+
+    pi = np.pi
     
 except ImportError as e:
     print(f"✗ Import error: {e}")
